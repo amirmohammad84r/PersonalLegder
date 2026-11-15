@@ -1,8 +1,9 @@
 package com.example.personalledger.domain.ai
 
 /**
- * Builds system + user prompts. Financial numbers are computed in-app;
- * the model may only narrate the provided snapshot.
+ * Legacy snapshot prompt helpers (pre tool-orchestration).
+ * Live ask flow uses [com.example.personalledger.domain.ai.orchestration.OrchestrationPrompts]
+ * and never sends FINANCIAL_CONTEXT on the planning turn.
  */
 object AiPromptBuilder {
     fun systemPrompt(): String = """

@@ -4,13 +4,15 @@ import com.example.personalledger.domain.IdGenerator
 import com.example.personalledger.domain.ai.AiChatMessage
 import com.example.personalledger.domain.ai.AiChatRole
 import com.example.personalledger.domain.ai.AiError
-import com.example.personalledger.domain.ai.AiPromptBuilder
 import com.example.personalledger.domain.ai.FinancialInsightSnapshot
+import com.example.personalledger.domain.ai.orchestration.AiToolOrchestrator
+import com.example.personalledger.domain.ai.tools.ToolExecutionContext
 import com.example.personalledger.domain.calendar.CalendarSystem
 import com.example.personalledger.domain.ai.FinancialInsightCalculator
 import com.example.personalledger.domain.nowInstant
 import com.example.personalledger.domain.repository.AccountRepository
 import com.example.personalledger.domain.repository.AiAssistantRepository
+import com.example.personalledger.domain.repository.CategoryRepository
 import com.example.personalledger.domain.repository.GoalAllocationRepository
 import com.example.personalledger.domain.repository.GoalRepository
 import com.example.personalledger.domain.repository.TransactionRepository
@@ -37,9 +39,17 @@ class BuildFinancialInsightUseCase(
     }
 }
 
+/**
+ * Asks the assistant via tool orchestration:
+ * plan without ledger payloads → validate → local deterministic tools → explain aggregates.
+ */
 class AskAiAssistantUseCase(
     private val aiRepository: AiAssistantRepository,
-    private val buildInsight: BuildFinancialInsightUseCase,
+    private val orchestrator: AiToolOrchestrator,
+    private val transactions: TransactionRepository,
+    private val categories: CategoryRepository,
+    private val goals: GoalRepository,
+    private val allocations: GoalAllocationRepository,
 ) {
     suspend operator fun invoke(
         question: String,
@@ -47,17 +57,20 @@ class AskAiAssistantUseCase(
     ): String {
         val trimmed = question.trim()
         if (trimmed.isEmpty()) throw AiError.InvalidConfiguration("سؤال خالی است.")
-        if (!aiRepository.isReady()) throw AiError.NotConfigured()
+        if (!aiRepository.isReady()) throw AiError.NotConfigured(aiRepository.statusMessage())
 
-        val snapshot = buildInsight(calendar)
-        val system = AiPromptBuilder.systemPrompt()
-        val user = AiPromptBuilder.userPrompt(trimmed, snapshot)
-
-        // Ask first with prior history only; persist turns after a successful reply.
-        val result = aiRepository.ask(
+        val context = ToolExecutionContext(
+            today = todayLocalDate(),
+            preferredCalendar = calendar,
+            transactions = transactions.listAll(),
+            categories = categories.observeAll().first(),
+            goals = goals.observeAll().first(),
+            allocations = allocations.listAll(),
+        )
+        val result = orchestrator.ask(
             question = trimmed,
-            systemPrompt = system,
-            userPrompt = user,
+            context = context,
+            toolCallingMode = aiRepository.toolCallingMode(),
         )
         val now = nowInstant().toEpochMilliseconds()
         aiRepository.appendChatMessage(
@@ -72,11 +85,11 @@ class AskAiAssistantUseCase(
             AiChatMessage(
                 id = IdGenerator.newId(),
                 role = AiChatRole.ASSISTANT,
-                content = result.text,
+                content = result,
                 createdAtEpochMs = nowInstant().toEpochMilliseconds(),
             ),
         )
-        return result.text
+        return result
     }
 }
 

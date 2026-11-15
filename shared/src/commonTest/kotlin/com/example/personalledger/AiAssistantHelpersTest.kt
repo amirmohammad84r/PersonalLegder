@@ -1,9 +1,10 @@
 package com.example.personalledger
 
 import com.example.personalledger.data.ai.AiSettingsStore
+import com.example.personalledger.data.ai.jasper.JasperEndpoints
+import com.example.personalledger.data.ai.provider.OpenAiCompatibleModelFilters
 import com.example.personalledger.data.ai.provider.CompatibleModelItem
 import com.example.personalledger.data.ai.provider.OpenAiAdapter
-import com.example.personalledger.data.ai.provider.OpenAiCompatibleModelFilters
 import com.example.personalledger.data.secure.SecureCredentialKeys
 import com.example.personalledger.data.secure.SecureCredentialStore
 import com.example.personalledger.domain.ai.AiProviderId
@@ -17,42 +18,28 @@ import kotlin.test.assertTrue
 
 class AiAssistantHelpersTest {
     @Test
-    fun openAiFiltersNonChatModels() {
-        assertTrue(OpenAiAdapter.isChatCapableModel("gpt-4o-mini"))
-        assertTrue(OpenAiAdapter.isChatCapableModel("o3-mini"))
-        assertFalse(OpenAiAdapter.isChatCapableModel("text-embedding-3-large"))
-        assertFalse(OpenAiAdapter.isChatCapableModel("whisper-1"))
-        assertFalse(OpenAiAdapter.isChatCapableModel("dall-e-3"))
+    fun jasperBaseUrlMatchesPanel() {
+        assertEquals("https://api.yjs.im", JasperEndpoints.BASE_URL)
+        assertEquals(
+            "https://api.yjs.im/v1/chat/completions",
+            JasperEndpoints.chatUrl("/v1/chat/completions"),
+        )
     }
 
     @Test
-    fun deepSeekAndGapGptFiltersMatchOfficialChatModels() {
+    fun onlyJasperProviderRemains() {
+        assertEquals(listOf(AiProviderId.JASPER), AiProviderId.entries)
+    }
+
+    @Test
+    fun openAiCompatibleFiltersStillWorkForGatewayCatalogNoise() {
+        assertTrue(OpenAiAdapter.isChatCapableModel("gpt-4o-mini"))
+        assertFalse(OpenAiAdapter.isChatCapableModel("text-embedding-3-large"))
         assertTrue(
             OpenAiCompatibleModelFilters.deepSeekChat(
                 CompatibleModelItem(id = "deepseek-flash", name = "DeepSeek-V4.1-Flash"),
             ),
         )
-        assertTrue(
-            OpenAiCompatibleModelFilters.deepSeekChat(
-                CompatibleModelItem(id = "deepseek-v4-pro"),
-            ),
-        )
-        assertFalse(
-            OpenAiCompatibleModelFilters.deepSeekChat(
-                CompatibleModelItem(id = "text-embedding-3"),
-            ),
-        )
-        assertTrue(
-            OpenAiCompatibleModelFilters.gapGptChat(
-                CompatibleModelItem(id = "gpt-5.6-sol"),
-            ),
-        )
-        assertFalse(
-            OpenAiCompatibleModelFilters.gapGptChat(
-                CompatibleModelItem(id = "gpt-image-2"),
-            ),
-        )
-        assertTrue(AiProviderId.entries.map { it.storageKey }.containsAll(listOf("deepseek", "gapgpt")))
     }
 
     @Test
@@ -67,42 +54,21 @@ class AiAssistantHelpersTest {
     }
 
     @Test
-    fun settingsResetClearsKeyProviderAndValidation() {
+    fun legacyConnectionSecretsCanBeClearedWithoutPrintingKey() {
         val secure = InMemorySecureCredentialStore()
         val settings = InMemorySettings()
         val store = AiSettingsStore(settings, secure)
         store.saveValidatedConnection(
-            providerId = AiProviderId.OPENAI,
-            modelId = "gpt-4o-mini",
-            apiKey = "sk-test-key-should-not-leak",
+            providerId = AiProviderId.JASPER,
+            modelId = "placeholder-model",
+            apiKey = "legacy-user-entered-key",
             validatedAtEpochMs = 123L,
         )
-        assertTrue(store.isReady())
-        assertEquals("sk-test-key-should-not-leak", store.readApiKey())
-
-        store.resetAllSecretsAndSettings()
-        assertFalse(store.isReady())
-        assertNull(store.readConnection())
-        assertNull(store.readApiKey())
+        assertTrue(store.hasLegacyUserApiKey())
+        store.clearLegacyUserConnectionSecrets()
+        assertFalse(store.hasLegacyUserApiKey())
         assertNull(secure.getSecret(SecureCredentialKeys.AI_API_KEY))
         assertNull(settings.getStringOrNull("ai_provider_id"))
-    }
-
-    @Test
-    fun previousConnectionRemainsUntilSuccessfulSave() {
-        val secure = InMemorySecureCredentialStore()
-        val settings = InMemorySettings()
-        val store = AiSettingsStore(settings, secure)
-        store.saveValidatedConnection(
-            providerId = AiProviderId.GEMINI,
-            modelId = "gemini-2.0-flash",
-            apiKey = "valid-key",
-            validatedAtEpochMs = 1L,
-        )
-        assertEquals(AiProviderId.GEMINI, store.readConnection()?.providerId)
-        assertEquals("gemini-2.0-flash", store.readConnection()?.modelId)
-        assertEquals("valid-key", store.readApiKey())
-        assertTrue(store.isReady())
     }
 }
 

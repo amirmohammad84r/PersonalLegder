@@ -24,6 +24,8 @@ import com.example.personalledger.domain.repository.TransactionRepository
 import com.example.personalledger.domain.sms.HeuristicBankSmsParser
 import com.example.personalledger.domain.sms.SmsTransactionParser
 import com.example.personalledger.domain.usecase.ArchiveGoalUseCase
+import com.example.personalledger.domain.ai.orchestration.AiToolOrchestrator
+import com.example.personalledger.domain.ai.tools.FinancialToolExecutor
 import com.example.personalledger.domain.usecase.AskAiAssistantUseCase
 import com.example.personalledger.domain.usecase.BuildFinancialInsightUseCase
 import com.example.personalledger.domain.usecase.CompleteGoalUseCase
@@ -139,7 +141,18 @@ class AppContainer(
         goalRepository,
         goalAllocationRepository,
     )
-    val askAiAssistant = AskAiAssistantUseCase(aiAssistantRepository, buildFinancialInsight)
+    private val aiToolOrchestrator = AiToolOrchestrator(
+        aiRepository = aiAssistantRepository,
+        executor = FinancialToolExecutor(),
+    )
+    val askAiAssistant = AskAiAssistantUseCase(
+        aiRepository = aiAssistantRepository,
+        orchestrator = aiToolOrchestrator,
+        transactions = transactionRepository,
+        categories = categoryRepository,
+        goals = goalRepository,
+        allocations = goalAllocationRepository,
+    )
     val resetAiAssistant = ResetAiAssistantUseCase(aiAssistantRepository)
 
     suspend fun initialize() {

@@ -47,31 +47,76 @@ internal object AiHttpSupport {
                 if (error is AiError) throw error
                 lastError = error
                 if (attempt >= MAX_TRANSIENT_RETRIES) {
-                    throw AiError.Network(cause = error)
+                    throw networkError(error)
                 }
                 attempt++
                 delay(400L * attempt)
             }
         }
-        throw AiError.Network(cause = lastError)
+        throw networkError(lastError)
     }
 
     suspend fun readSafeErrorMessage(response: HttpResponse): String {
-        // Consume body without exposing it to UI/logs.
-        runCatching { response.bodyAsText() }
+        val raw = runCatching { response.bodyAsText() }.getOrDefault("")
+        val providerHint = extractProviderErrorHint(raw)
         return when (response.status) {
             HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden ->
-                "احراز هویت ناموفق بود. کلید API را بررسی کنید."
+                "احراز هویت ناموفق بود. کلید یا دسترسی Jasper را بررسی کنید."
             HttpStatusCode.TooManyRequests ->
                 "محدودیت نرخ درخواست. کمی بعد دوباره تلاش کنید."
             HttpStatusCode.NotFound ->
-                "مدل یا سرویس پیدا نشد. تنظیمات را بررسی کنید."
+                "آدرس یا مدل Jasper پیدا نشد. مسیر chat و model id را بررسی کنید."
             HttpStatusCode.BadRequest ->
-                "درخواست نامعتبر بود. مدل انتخاب‌شده را بررسی کنید."
+                providerHint ?: "درخواست نامعتبر بود. مدل انتخاب‌شده را بررسی کنید."
             HttpStatusCode.PaymentRequired ->
-                "سهمیه یا اعتبار حساب ارائه‌دهنده کافی نیست."
+                "سهمیه یا اعتبار حساب Jasper کافی نیست."
+            HttpStatusCode.ServiceUnavailable ->
+                providerHint
+                    ?: "سرویس Jasper موقتاً در دسترس نیست (کد 503). مدل یا کانال را بررسی کنید."
             else ->
-                "پاسخ ناموفق از ارائه‌دهنده (کد ${response.status.value})."
+                providerHint
+                    ?: "پاسخ ناموفق از Jasper (کد ${response.status.value})."
+        }
+    }
+
+    /**
+     * Pull a short, secret-free hint from OpenAI-compatible error JSON.
+     * Never returns Authorization material or raw API keys.
+     */
+    private fun extractProviderErrorHint(raw: String): String? {
+        if (raw.isBlank()) return null
+        val redacted = raw.replace(Regex("sk-[A-Za-z0-9_-]{6,}"), "[redacted]")
+        val message = Regex("\"message\"\\s*:\\s*\"([^\"]{1,240})\"")
+            .find(redacted)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.replace("\\n", " ")
+            ?.trim()
+            .orEmpty()
+        if (message.isBlank()) return null
+        val lower = message.lowercase()
+        return when {
+            "no available channel" in lower || "channel" in lower && "model" in lower ->
+                "مدل تنظیم‌شده برای این کلید کانال فعال ندارد. model id را از فهرست مدل‌های Jasper عوض کنید."
+            "invalid" in lower && "model" in lower ->
+                "شناسهٔ مدل Jasper نامعتبر یا برای این کلید غیرفعال است."
+            else -> message.take(180)
+        }
+    }
+
+    private fun networkError(cause: Throwable?): AiError.Network {
+        val detail = cause?.let { err ->
+            val name = err::class.simpleName.orEmpty()
+            val msg = err.message.orEmpty()
+                .replace(Regex("sk-[A-Za-z0-9_-]{6,}"), "[redacted]")
+                .take(120)
+            listOf(name, msg).filter { it.isNotBlank() }.joinToString(": ")
+        }.orEmpty()
+        val base = "اتصال شبکه به Jasper برقرار نشد. اینترنت دستگاه را بررسی کنید و اپ را Clean Build کنید."
+        return if (detail.isBlank()) {
+            AiError.Network(base, cause)
+        } else {
+            AiError.Network("$base ($detail)", cause)
         }
     }
 
@@ -108,5 +153,18 @@ internal suspend fun HttpClient.getJson(
     AiHttpSupport.executeWithLimitedRetry(this, HttpMethod.Get, url, configure)
 
 internal fun HttpRequestBuilder.jsonBody(body: Any) {
-    setBody(body)
+    // Encode JSON ourselves so Darwin/OkHttp both send a raw JSON string body.
+    // Passing JsonObject through ContentNegotiation has been flaky on iOS Ktor Darwin.
+    when (body) {
+        is kotlinx.serialization.json.JsonElement -> {
+            setBody(
+                com.example.personalledger.data.ai.aiJson.encodeToString(
+                    kotlinx.serialization.json.JsonElement.serializer(),
+                    body,
+                ),
+            )
+        }
+        is String -> setBody(body)
+        else -> setBody(body)
+    }
 }

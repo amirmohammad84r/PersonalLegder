@@ -94,4 +94,13 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 echo "Compile Kotlin Framework using JAVA_HOME=$JAVA_HOME"
 "$JAVA_HOME/bin/java" -version
-exec ./gradlew :shared:embedAndSignAppleFrameworkForXcode
+
+# Ensure Jasper secrets are regenerated from secrets/jasper.local.properties before linking.
+# Without this, an older embedded model id (e.g. deepseek-flash) can ship on device.
+./gradlew --no-configuration-cache :shared:generateJasperEmbeddedConfig
+
+if [ ! -f "$REPO_ROOT/secrets/jasper.local.properties" ]; then
+    echo "warning: secrets/jasper.local.properties missing — Jasper assistant will be unavailable in this iOS build." >&2
+fi
+
+exec ./gradlew --no-configuration-cache :shared:embedAndSignAppleFrameworkForXcode

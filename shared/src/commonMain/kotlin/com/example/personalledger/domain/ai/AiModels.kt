@@ -1,34 +1,15 @@
 package com.example.personalledger.domain.ai
 
 /**
- * Providers with official HTTPS APIs usable from mobile clients.
- * Model catalogs are fetched live with the user's API key when possible.
+ * Built-in AI gateway. End-users do not pick a provider; the app talks to Jasper only.
  */
 enum class AiProviderId(
     val storageKey: String,
     val displayName: String,
-    /** Short account/API-key guidance shown on the connection form. */
-    val accountHint: String,
 ) {
-    OPENAI(
-        storageKey = "openai",
-        displayName = "OpenAI",
-        accountHint = "کلید را از platform.openai.com بسازید و حساب OpenAI فعال داشته باشید.",
-    ),
-    DEEPSEEK(
-        storageKey = "deepseek",
-        displayName = "DeepSeek",
-        accountHint = "کلید را از platform.deepseek.com بسازید (API سازگار با OpenAI).",
-    ),
-    GAPGPT(
-        storageKey = "gapgpt",
-        displayName = "GapGPT",
-        accountHint = "کلید را از gapgpt.app/platform-v2/tokens بسازید (API سازگار با OpenAI).",
-    ),
-    GEMINI(
-        storageKey = "gemini",
-        displayName = "Google Gemini",
-        accountHint = "کلید را از Google AI Studio بسازید.",
+    JASPER(
+        storageKey = "jasper",
+        displayName = "Jasper",
     ),
     ;
 
@@ -42,7 +23,6 @@ data class AiModelInfo(
     val id: String,
     val displayName: String,
     val description: String? = null,
-    /** True when this entry came from the provider's models API. */
     val fromLiveCatalog: Boolean,
 )
 
@@ -78,8 +58,59 @@ data class AiChatResult(
     val text: String,
 )
 
+/**
+ * How this app talks to a provider for tool orchestration.
+ */
+enum class AiToolCallingMode {
+    /** OpenAI-compatible tools + tool_calls (used for Jasper when path is OpenAI-compatible). */
+    OPENAI_COMPATIBLE_TOOLS,
+    /** Strict JSON plan validated in-app (never executed raw). */
+    STRUCTURED_JSON_PLAN,
+}
+
+data class AiToolDefinition(
+    val name: String,
+    val description: String,
+    val parametersSchema: kotlinx.serialization.json.JsonObject,
+)
+
+sealed class AiCompletionMessage {
+    data class System(val content: String) : AiCompletionMessage()
+    data class User(val content: String) : AiCompletionMessage()
+    data class Assistant(
+        val content: String?,
+        val toolCalls: List<AiProposedToolCall> = emptyList(),
+    ) : AiCompletionMessage()
+    data class ToolResult(
+        val toolCallId: String,
+        val content: String,
+    ) : AiCompletionMessage()
+}
+
+data class AiProposedToolCall(
+    val id: String,
+    val name: String,
+    val argumentsJson: String,
+)
+
+data class AiCompletionRequest(
+    val providerId: AiProviderId,
+    val modelId: String,
+    val apiKey: String,
+    val messages: List<AiCompletionMessage>,
+    val tools: List<AiToolDefinition>? = null,
+    val enableTools: Boolean = false,
+    val disableThinkingForTools: Boolean = false,
+)
+
+data class AiCompletionResult(
+    val text: String?,
+    val toolCalls: List<AiProposedToolCall> = emptyList(),
+    val rawAssistantContent: String? = null,
+)
+
 sealed class AiError(message: String, cause: Throwable? = null) : Exception(message, cause) {
-    class NotConfigured(message: String = "اتصال دستیار تنظیم نشده است") : AiError(message)
+    class NotConfigured(message: String = "دستیار هوشمند پیکربندی نشده است") : AiError(message)
     class InvalidConfiguration(message: String) : AiError(message)
     class Authentication(message: String) : AiError(message)
     class RateLimited(message: String) : AiError(message)

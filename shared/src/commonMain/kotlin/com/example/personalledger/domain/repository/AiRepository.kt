@@ -1,10 +1,10 @@
 package com.example.personalledger.domain.repository
 
 import com.example.personalledger.domain.ai.AiChatMessage
-import com.example.personalledger.domain.ai.AiChatResult
+import com.example.personalledger.domain.ai.AiCompletionRequest
+import com.example.personalledger.domain.ai.AiCompletionResult
 import com.example.personalledger.domain.ai.AiConnectionSettings
-import com.example.personalledger.domain.ai.AiModelInfo
-import com.example.personalledger.domain.ai.AiProviderId
+import com.example.personalledger.domain.ai.AiToolCallingMode
 import kotlinx.coroutines.flow.Flow
 
 interface AiAssistantRepository {
@@ -12,31 +12,21 @@ interface AiAssistantRepository {
     fun observeChatHistory(): Flow<List<AiChatMessage>>
     fun isReady(): Boolean
     fun readConnection(): AiConnectionSettings?
-    fun hasApiKey(): Boolean
+    fun statusMessage(): String
 
-    fun supportedProviders(): List<AiProviderId>
+    fun toolCallingMode(): AiToolCallingMode
 
-    suspend fun listModels(providerId: AiProviderId, apiKey: String): List<AiModelInfo>
+    /** Recent user/assistant chat turns only (no ledger payloads). */
+    fun readRecentChatForProvider(limit: Int): List<AiChatMessage>
 
-    /**
-     * Tests auth + that [modelId] exists for the key. Saves only on success.
-     * Failed tests must not wipe a previous successful connection.
-     */
-    suspend fun testAndSaveConnection(
-        providerId: AiProviderId,
-        modelId: String,
-        apiKey: String,
-    ): AiConnectionSettings
-
-    suspend fun ask(
-        question: String,
-        systemPrompt: String,
-        userPrompt: String,
-    ): AiChatResult
+    /** Multi-turn completion with optional native tools or plain messages. */
+    suspend fun complete(request: AiCompletionRequest): AiCompletionResult
 
     fun appendChatMessage(message: AiChatMessage)
+
+    /** Clears chat history / AI cache only — never clears embedded Jasper build secrets. */
     fun clearChatHistory()
 
-    /** Clears secure key, provider/model, validation, and chat history. */
+    /** Alias for [clearChatHistory] used by reset use case. */
     fun resetAssistant()
 }

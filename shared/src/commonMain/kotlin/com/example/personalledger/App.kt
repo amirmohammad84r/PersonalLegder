@@ -2,7 +2,9 @@ package com.example.personalledger
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.Scaffold
@@ -18,6 +20,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.ViewModel
@@ -117,12 +120,16 @@ private fun LedgerRoot() {
         }
     }
 
+    // Exclude IME from Scaffold insets. On iOS, keyboard resize + IME inset together
+    // push the top bar off-screen (especially on the AI chat composer).
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        contentWindowInsets = WindowInsets.safeDrawing,
+        contentWindowInsets = WindowInsets.safeDrawing.exclude(WindowInsets.ime),
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            if (destination is AppDestination.Root) {
+            if (destination is AppDestination.Root && !imeVisible) {
                 LedgerBottomBar(selected = tab, onSelect = { tab = it })
             }
         },

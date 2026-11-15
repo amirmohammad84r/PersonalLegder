@@ -18,3 +18,15 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+
+# Local Jasper / AI secrets — never commit real keys
+secrets/jasper.local.properties
+secrets/*.local.properties
+secrets/*.key
+secrets/*.pem
+**/.jasper-secrets/
+# Generated obfuscated embeds (also under build/, listed explicitly)
+shared/generated/jasper/
+# Local device ledger backups / pulled dumps
+tools/.ledger-*.json
+tools/*ledger*backup*.json
