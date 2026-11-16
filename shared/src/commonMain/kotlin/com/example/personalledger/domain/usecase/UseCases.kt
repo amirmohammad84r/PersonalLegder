@@ -78,6 +78,7 @@ class ObserveDashboardUseCase(
                 monthExpenseRial = BalanceCalculator.totalExpense(monthTxs),
                 recentTransactions = recent,
                 accounts = accs,
+                activeAccountCount = accs.size,
                 selectedAccountId = accountId,
                 monthLabel = AppCalendar.formatMonthYear(today, calendar),
             )

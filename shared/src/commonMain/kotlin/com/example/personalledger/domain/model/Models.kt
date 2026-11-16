@@ -47,13 +47,15 @@ data class DashboardSummary(
     val cashBalanceRial: Long,
     /** Sum of balances for non-cash (bank-like) accounts in the current account filter. */
     val bankBalanceRial: Long,
-    /** Income in the current Jalali month (account-filtered). */
+    /** Income in the selected month (account-filtered). */
     val monthIncomeRial: Long,
-    /** Expense in the current Jalali month (account-filtered). */
+    /** Expense in the selected month (account-filtered). */
     val monthExpenseRial: Long,
-    /** Recent txs in the current Jalali month (account-filtered). */
+    /** Recent txs in the selected month (account-filtered). */
     val recentTransactions: List<Transaction>,
     val accounts: List<Account>,
+    /** Count of all accounts (for «حساب فعال»). */
+    val activeAccountCount: Int,
     /** null = همه حساب‌ها */
     val selectedAccountId: String?,
     val monthLabel: String,

@@ -1,11 +1,11 @@
 package com.example.personalledger.presentation.screens.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,13 +19,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -50,15 +55,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.personalledger.domain.CurrencyConfig
 import com.example.personalledger.domain.model.Account
 import com.example.personalledger.domain.model.DashboardSummary
+import com.example.personalledger.domain.model.Transaction
 import com.example.personalledger.domain.model.TransactionType
 import com.example.personalledger.presentation.components.ErrorBox
-import com.example.personalledger.presentation.components.LedgerCard
 import com.example.personalledger.presentation.components.LoadingBox
 import com.example.personalledger.presentation.components.ScreenPadding
-import com.example.personalledger.presentation.components.TransactionRow
 import com.example.personalledger.presentation.format.MoneyFormatter
 import com.example.personalledger.presentation.format.toPersianDigits
 import com.example.personalledger.presentation.strings.Strings
+import com.example.personalledger.presentation.theme.LedgerColors
 
 @Composable
 fun HomeScreen(
@@ -76,6 +81,7 @@ fun HomeScreen(
             summary = s.summary,
             categoryNames = categoryNames,
             onAccountFilterChange = viewModel::onAccountFilterChange,
+            onShiftMonth = viewModel::shiftMonth,
             onAddTransaction = onAddTransaction,
             onOpenTransaction = onOpenTransaction,
             onSeeAllTransactions = onSeeAllTransactions,
@@ -88,98 +94,165 @@ private fun HomeContent(
     summary: DashboardSummary,
     categoryNames: Map<String, String>,
     onAccountFilterChange: (String?) -> Unit,
+    onShiftMonth: (Int) -> Unit,
     onAddTransaction: () -> Unit,
     onOpenTransaction: (String) -> Unit,
     onSeeAllTransactions: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(ScreenPadding),
-    ) {
-        Text(
-            text = Strings.home,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(14.dp))
-        WalletCard(
-            summary = summary,
-            onAccountFilterChange = onAccountFilterChange,
-            onAddTransaction = onAddTransaction,
-        )
-        Spacer(Modifier.height(18.dp))
-        Text(
-            text = summary.monthLabel.toPersianDigits(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(10.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            MonthSummaryCard(
-                title = Strings.incomeThisMonth,
-                amount = MoneyFormatter.format(summary.monthIncomeRial),
-                modifier = Modifier.weight(1f),
-            )
-            MonthSummaryCard(
-                title = Strings.expenseThisMonth,
-                amount = MoneyFormatter.format(summary.monthExpenseRial),
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(Modifier.height(22.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(ScreenPadding)
+                .padding(bottom = 88.dp),
         ) {
             Text(
-                text = Strings.recentThisMonth,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
+                text = Strings.home,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
             )
-            TextButton(onClick = onAddTransaction) {
-                Text(Strings.add, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(10.dp))
+            MonthSwitcher(
+                label = summary.monthLabel.toPersianDigits(),
+                onPrevious = { onShiftMonth(-1) },
+                onNext = { onShiftMonth(1) },
+            )
+            Spacer(Modifier.height(14.dp))
+            BalanceCard(
+                summary = summary,
+                onAccountFilterChange = onAccountFilterChange,
+            )
+            Spacer(Modifier.height(14.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MonthStatCard(
+                    title = Strings.incomeThisMonth,
+                    amount = MoneyFormatter.format(summary.monthIncomeRial),
+                    icon = Icons.Default.KeyboardArrowUp,
+                    accent = LedgerColors.IncomeGreen,
+                    modifier = Modifier.weight(1f),
+                )
+                MonthStatCard(
+                    title = Strings.expenseThisMonth,
+                    amount = MoneyFormatter.format(summary.monthExpenseRial),
+                    icon = Icons.Default.KeyboardArrowDown,
+                    accent = LedgerColors.ExpenseRose,
+                    modifier = Modifier.weight(1f),
+                )
             }
-        }
-        if (summary.recentTransactions.isEmpty()) {
-            HomeEmptyTransactions(onAddTransaction = onAddTransaction)
-        } else {
-            LedgerCard {
-                summary.recentTransactions.forEach { tx ->
-                    TransactionRow(
-                        title = tx.title,
-                        subtitle = categoryNames[tx.categoryId].orEmpty(),
-                        amountText = MoneyFormatter.formatSigned(
-                            tx.amountRial,
-                            income = tx.type == TransactionType.INCOME,
-                        ),
-                        type = tx.type,
-                        onClick = { onOpenTransaction(tx.id) },
-                    )
+            Spacer(Modifier.height(22.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = Strings.recentTransactions,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onSeeAllTransactions) {
+                    Text(Strings.seeAllTransactions, color = MaterialTheme.colorScheme.primary)
                 }
             }
-            TextButton(
-                onClick = onSeeAllTransactions,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            ) {
-                Text(Strings.seeAllTransactions, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(4.dp))
+            if (summary.recentTransactions.isEmpty()) {
+                Text(
+                    text = Strings.emptyTransactions,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 28.dp),
+                    textAlign = TextAlign.Center,
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    summary.recentTransactions.forEach { tx ->
+                        HomeTransactionCard(
+                            transaction = tx,
+                            categoryName = categoryNames[tx.categoryId].orEmpty(),
+                            onClick = { onOpenTransaction(tx.id) },
+                        )
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(24.dp))
+
+        Button(
+            onClick = onAddTransaction,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .fillMaxWidth(0.62f)
+                .height(54.dp),
+            shape = RoundedCornerShape(28.dp),
+            contentPadding = PaddingValues(horizontal = 20.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = Strings.addTransactionFab,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+            )
+        }
     }
 }
 
 @Composable
-private fun WalletCard(
+private fun MonthSwitcher(
+    label: String,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        IconButton(
+            onClick = onPrevious,
+            modifier = Modifier.semantics { contentDescription = Strings.previousMonth },
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(horizontal = 8.dp),
+        )
+        IconButton(
+            onClick = onNext,
+            modifier = Modifier.semantics { contentDescription = Strings.nextMonth },
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BalanceCard(
     summary: DashboardSummary,
     onAccountFilterChange: (String?) -> Unit,
-    onAddTransaction: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = when (summary.selectedAccountId) {
@@ -187,116 +260,93 @@ private fun WalletCard(
         else -> summary.accounts.find { it.id == summary.selectedAccountId }?.name
             ?: Strings.accountFilterAll
     }
+    val activeLabel =
+        "${Strings.activeAccountsPrefix} ${summary.activeAccountCount.toString().toPersianDigits()}"
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp,
         shadowElevation = 2.dp,
     ) {
-        Column(Modifier.padding(18.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .semantics { contentDescription = Strings.selectAccount }
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable { expanded = true }
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(
-                        text = Strings.selectedAccountLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = selectedLabel,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.height(4.dp))
-                    Box {
-                        Row(
-                            modifier = Modifier
-                                .semantics { contentDescription = Strings.selectAccount }
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { expanded = true }
-                                .padding(vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = selectedLabel,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Icon(
-                                Icons.Default.KeyboardArrowDown,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        AccountFilterMenu(
-                            expanded = expanded,
-                            accounts = summary.accounts,
-                            onDismiss = { expanded = false },
-                            onSelect = {
-                                onAccountFilterChange(it)
-                                expanded = false
-                            },
+                    Spacer(Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
-                        .clickable(onClick = onAddTransaction)
-                        .semantics { contentDescription = Strings.addTransaction },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
+                AccountFilterMenu(
+                    expanded = expanded,
+                    accounts = summary.accounts,
+                    onDismiss = { expanded = false },
+                    onSelect = {
+                        onAccountFilterChange(it)
+                        expanded = false
+                    },
+                )
             }
 
             Spacer(Modifier.height(18.dp))
             Text(
-                text = Strings.totalBalance,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = MoneyFormatter.format(summary.totalBalanceRial, withCurrency = false),
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = MoneyFormatter.format(summary.totalBalanceRial, withCurrency = false),
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = CurrencyConfig.displayName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 4.dp),
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = CurrencyConfig.displayName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(14.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                BalanceChip(
-                    label = Strings.bankAccountsLabel,
-                    amount = MoneyFormatter.format(summary.bankBalanceRial),
-                    modifier = Modifier.weight(1f),
+                Text(
+                    text = Strings.totalBalance,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                BalanceChip(
-                    label = Strings.cashAccountsLabel,
-                    amount = MoneyFormatter.format(summary.cashBalanceRial),
-                    modifier = Modifier.weight(1f),
+                Text(
+                    text = activeLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -329,36 +379,47 @@ private fun AccountFilterMenu(
 }
 
 @Composable
-private fun BalanceChip(
-    label: String,
+private fun MonthStatCard(
+    title: String,
     amount: String,
+    icon: ImageVector,
+    accent: Color,
     modifier: Modifier = Modifier,
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 1.dp,
     ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                        .background(accent.copy(alpha = 0.18f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
+                }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(10.dp))
             Text(
                 text = amount,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -368,92 +429,61 @@ private fun BalanceChip(
 }
 
 @Composable
-private fun MonthSummaryCard(
-    title: String,
-    amount: String,
-    modifier: Modifier = Modifier,
+private fun HomeTransactionCard(
+    transaction: Transaction,
+    categoryName: String,
+    onClick: () -> Unit,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 1.dp,
-    ) {
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = amount,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
+    val income = transaction.type == TransactionType.INCOME
+    val accent = if (income) LedgerColors.IncomeGreen else LedgerColors.ExpenseRose
+    val icon = if (income) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown
+    val amountText = buildString {
+        append(if (income) "+" else "−")
+        append(MoneyFormatter.format(transaction.amountRial, withCurrency = false))
     }
-}
 
-@Composable
-private fun HomeEmptyTransactions(onAddTransaction: () -> Unit) {
-    Column(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 28.dp, bottom = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
     ) {
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .clip(CircleShape)
-                .border(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
-                    shape = CircleShape,
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = accent)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = transaction.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                .background(Color.Transparent),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(34.dp),
-            )
-        }
-        Spacer(Modifier.height(18.dp))
-        Text(
-            text = Strings.emptyTransactions,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = Strings.emptyTransactionsHint,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(20.dp))
-        Button(
-            onClick = onAddTransaction,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ),
-        ) {
+                Text(
+                    text = categoryName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Text(
-                text = Strings.addTransaction,
+                text = amountText,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
+                color = accent,
             )
         }
     }
