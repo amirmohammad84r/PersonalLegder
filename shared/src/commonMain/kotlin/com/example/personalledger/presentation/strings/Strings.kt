@@ -4,7 +4,7 @@ package com.example.personalledger.presentation.strings
  * Central UI copy for v1 (Persian). Keep display strings here for future localization.
  */
 object Strings {
-    const val appName = "دفترچه مالی"
+    const val appName = "خرج‌یار"
     const val home = "خانه"
     const val transactions = "تراکنش‌ها"
     const val seeAllTransactions = "مشاهدهٔ همه"
@@ -24,10 +24,6 @@ object Strings {
     const val aiThinking = "در حال آماده‌سازی پاسخ…"
     const val aiCancelRequest = "لغو"
     const val aiCancelled = "درخواست لغو شد"
-    const val aiEmptyChatHint =
-        "سؤال مالی بپرسید. جمع‌ها در خود اپ محاسبه می‌شوند و فقط نتیجهٔ تجمیعی برای توضیح به مدل ارسال می‌شود."
-    const val aiPrivacyNotice =
-        "درخواست‌ها مستقیم از این دستگاه به Jasper ارسال می‌شوند. دادهٔ خام تراکنش‌ها به مدل داده نمی‌شود؛ فقط aggregateهای محاسبه‌شده در اپ."
     const val aiResetTitle = "بازنشانی دستیار"
     const val aiResetConfirm =
         "فقط تاریخچهٔ گفت‌وگوی دستیار پاک می‌شود. داده‌های مالی اپ دست نخورده می‌مانند. ادامه می‌دهید؟"

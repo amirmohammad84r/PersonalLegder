@@ -111,12 +111,6 @@ private fun AiChatPane(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.padding(4.dp))
-                Text(
-                    text = Strings.aiPrivacyNotice,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
 
@@ -128,17 +122,6 @@ private fun AiChatPane(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            if (state.ready && state.messages.isEmpty() && !state.asking) {
-                item {
-                    LedgerCard {
-                        Text(
-                            Strings.aiEmptyChatHint,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
             items(state.messages, key = { it.id }) { message ->
                 ChatBubble(message = message)
             }

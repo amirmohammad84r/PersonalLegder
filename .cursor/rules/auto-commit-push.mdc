@@ -1,0 +1,16 @@
+---
+description: After finishing a user task in PersonalLedger, commit and push to GitHub
+alwaysApply: true
+---
+
+# Auto commit & push (this repo only)
+
+When a user request for **this PersonalLedger project** is finished and there are local changes:
+
+1. Run the normal git safety checks (`status`, `diff`, `log`).
+2. Stage relevant files (never secrets: `secrets/*.local.properties`, keys, credentials).
+3. Create a concise commit with a HEREDOC message focused on why.
+4. Push to `origin` on the current branch (`git push -u` if needed).
+5. Do **not** apply this habit to other projects unless the user asks there too.
+
+Skip commit/push only if there are no changes, or the user explicitly said not to commit/push for that task.

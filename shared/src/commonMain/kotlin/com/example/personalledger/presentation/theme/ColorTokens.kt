@@ -32,4 +32,8 @@ object LedgerColors {
     // —— Semantic (shared) ——
     val IncomeGreen = Color(0xFF5F7A4A)
     val ExpenseRose = Color(0xFFA85A4A)
+
+    // —— Splash / brand ——
+    val SplashBrown = LightText
+    val SplashYellow = DarkGoldBright
 }

@@ -176,6 +176,13 @@ tasks.withType<KotlinCompilationTask<*>>().configureEach {
     dependsOn(generateJasperEmbeddedConfig)
 }
 
+compose {
+    resources {
+        publicResClass = true
+        packageOfResClass = "com.example.personalledger.resources"
+    }
+}
+
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
 }

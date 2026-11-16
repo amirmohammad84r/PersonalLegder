@@ -33,7 +33,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.personalledger.di.AppContainer
 import com.example.personalledger.presentation.calendar.LocalCalendarSystem
 import com.example.personalledger.presentation.components.LedgerBottomBar
-import com.example.personalledger.presentation.components.LoadingBox
 import com.example.personalledger.presentation.components.MainTab
 import com.example.personalledger.presentation.navigation.AppDestination
 import com.example.personalledger.presentation.navigation.NavigateBackHandler
@@ -62,6 +61,7 @@ import com.example.personalledger.presentation.screens.transactionedit.Transacti
 import com.example.personalledger.presentation.screens.transactionedit.TransactionEditViewModel
 import com.example.personalledger.presentation.screens.transactions.TransactionsScreen
 import com.example.personalledger.presentation.screens.transactions.TransactionsViewModel
+import com.example.personalledger.presentation.splash.AppSplashOverlay
 import com.example.personalledger.presentation.theme.PersonalLedgerTheme
 import kotlin.reflect.KClass
 import kotlinx.coroutines.flow.map
@@ -74,6 +74,7 @@ val LocalAppContainer = staticCompositionLocalOf<AppContainer> {
 @Composable
 fun App(container: AppContainer) {
     var ready by remember { mutableStateOf(false) }
+    var showSplash by remember { mutableStateOf(true) }
     LaunchedEffect(container) {
         container.initialize()
         ready = true
@@ -90,10 +91,16 @@ fun App(container: AppContainer) {
         LocalCalendarSystem provides calendarSystem,
     ) {
         PersonalLedgerTheme(themeMode = themeMode) {
-            if (!ready) {
-                LoadingBox()
-            } else {
-                LedgerRoot()
+            Box(Modifier.fillMaxSize()) {
+                if (ready) {
+                    LedgerRoot()
+                }
+                if (showSplash) {
+                    AppSplashOverlay(
+                        appReady = ready,
+                        onFinished = { showSplash = false },
+                    )
+                }
             }
         }
     }
