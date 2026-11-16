@@ -217,6 +217,34 @@ object FinancialToolCalculator {
         )
     }
 
+    fun incomeSavingsSummary(
+        transactions: List<Transaction>,
+        range: HalfOpenDateRange,
+        monthsCovered: Int,
+    ): IncomeSavingsSummaryResult {
+        val summary = monthlySummary(transactions, range, ToolTransactionScope.ALL)
+        val months = monthsCovered.coerceIn(1, FinancialToolId.MAX_LOOKBACK_MONTHS)
+        return IncomeSavingsSummaryResult(
+            periodStartInclusive = summary.periodStartInclusive,
+            periodEndExclusive = summary.periodEndExclusive,
+            calendar = summary.calendar,
+            periodLabel = summary.periodLabel,
+            monthsCovered = months,
+            incomeTotalRial = summary.incomeTotalRial,
+            expenseTotalRial = summary.expenseTotalRial,
+            netBalanceRial = summary.balanceRial,
+            averageMonthlyIncomeRial = SafeMoney.averageFloor(summary.incomeTotalRial, months),
+            averageMonthlyExpenseRial = SafeMoney.averageFloor(summary.expenseTotalRial, months),
+            averageMonthlyNetBalanceRial = if (summary.balanceRial >= 0L) {
+                SafeMoney.averageFloor(summary.balanceRial, months)
+            } else {
+                -SafeMoney.averageFloor(-summary.balanceRial, months)
+            },
+            transactionCount = summary.transactionCount,
+            isEmpty = summary.isEmpty,
+        )
+    }
+
     /**
      * Labels are untrusted data (possible prompt injection). Strip control chars;
      * callers must still treat them as data, never instructions.

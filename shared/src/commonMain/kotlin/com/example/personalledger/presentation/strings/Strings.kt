@@ -148,6 +148,12 @@ object Strings {
     const val calendarMonth = "ماه"
     const val calendarDay = "روز"
     const val management = "مدیریت"
+    const val aiPrivacySection = "دستیار هوشمند"
+    const val aiHistoryConsentTitle = "اجازهٔ ارسال تاریخچهٔ گفتگو"
+    const val aiHistoryConsentHint =
+        "فقط وقتی مدل صریحاً تاریخچه بخواهد و این گزینه روشن باشد، تا ۶ پیام اخیر گفتگوی AI به Jasper فرستاده می‌شود."
+    const val aiHistoryConsentOn = "فعال"
+    const val aiHistoryConsentOff = "غیرفعال"
     const val retry = "تلاش دوباره"
     const val loading = "در حال بارگذاری…"
     const val errorGeneric = "مشکلی پیش آمد"

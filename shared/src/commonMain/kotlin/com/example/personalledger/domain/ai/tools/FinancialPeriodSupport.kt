@@ -77,6 +77,31 @@ object FinancialPeriodSupport {
         return resolveYearMonth(year, month, calendar)
     }
 
+    /**
+     * Last [months] calendar months ending at the month containing [today], half-open.
+     * Example: months=1 → current month only; months=6 → from start of month (today-5m) to endExclusive after current month.
+     */
+    fun resolveLastNMonths(
+        months: Int,
+        today: LocalDate,
+        calendar: CalendarSystem,
+    ): HalfOpenDateRange {
+        val clamped = months.coerceIn(1, FinancialToolId.MAX_LOOKBACK_MONTHS)
+        val startAnchor = AppCalendar.plusMonths(today, -(clamped - 1), calendar)
+        val (startYear, startMonth, _) = AppCalendar.parts(startAnchor, calendar)
+        val start = AppCalendar.toLocalDate(startYear, startMonth, 1, calendar)
+            ?: throw FinancialToolValidationException("Cannot resolve lookback start.")
+        val currentMonth = resolveNamedMonth(NamedMonthPeriod.CURRENT_MONTH, today, calendar)
+        return enforceMaxLength(
+            HalfOpenDateRange(
+                startInclusive = start,
+                endExclusive = currentMonth.endExclusive,
+                calendar = calendar,
+                displayLabel = "${currentMonth.displayLabel} (آخرین $clamped ماه)",
+            ),
+        )
+    }
+
     fun resolveHalfOpen(
         startInclusive: LocalDate,
         endExclusive: LocalDate,

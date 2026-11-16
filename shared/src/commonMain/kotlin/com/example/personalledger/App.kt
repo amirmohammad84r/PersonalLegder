@@ -209,6 +209,7 @@ private fun LedgerRoot() {
                                 SettingsViewModel(
                                     container.themePreferences,
                                     container.displayPreferences,
+                                    container.aiAssistantPreferences,
                                 )
                             })
                             SettingsScreen(

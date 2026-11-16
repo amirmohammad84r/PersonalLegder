@@ -16,6 +16,14 @@ data class ToolExecutionContext(
     val categories: List<Category>,
     val goals: List<Goal>,
     val allocations: List<GoalAllocation>,
+    /**
+     * Filled by orchestrator after a successful property search in this ask.
+     * Used by estimate_home_purchase_timeline so the model cannot invent prices.
+     */
+    var lastPropertySearchJson: String? = null,
+    var lastPropertyPriceMinRial: Long? = null,
+    var lastPropertyPriceMaxRial: Long? = null,
+    var propertySearchRetrievedAtEpochMs: Long? = null,
 )
 
 data class ProposedToolCall(
@@ -146,5 +154,25 @@ data class GoalProgressToolResult(
     val remainingRial: Long,
     val progressPercent: Int,
     val isTargetReached: Boolean,
+    val currencyUnit: String = "ریال",
+)
+
+@Serializable
+data class IncomeSavingsSummaryResult(
+    val periodStartInclusive: String,
+    val periodEndExclusive: String,
+    val calendar: String,
+    val periodLabel: String,
+    val monthsCovered: Int,
+    val incomeTotalRial: Long,
+    val expenseTotalRial: Long,
+    /** Income − expense over the range. Not proven disposable savings. */
+    val netBalanceRial: Long,
+    val averageMonthlyIncomeRial: Long,
+    val averageMonthlyExpenseRial: Long,
+    val averageMonthlyNetBalanceRial: Long,
+    val netBalanceLabel: String = "تراز درآمد و هزینه (پس‌انداز اثبات‌شده نیست)",
+    val transactionCount: Int,
+    val isEmpty: Boolean,
     val currencyUnit: String = "ریال",
 )

@@ -25,6 +25,7 @@ import com.example.personalledger.domain.model.GoalAllocation
 import com.example.personalledger.domain.model.GoalStatus
 import com.example.personalledger.domain.model.Transaction
 import com.example.personalledger.domain.model.TransactionType
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
@@ -238,14 +239,16 @@ class FinancialToolsTest {
             goals = emptyList(),
             allocations = emptyList(),
         )
-        val outcome = executor.execute(
-            ValidatedToolCall(
-                id = "1",
-                toolId = FinancialToolId.GET_EXPENSE_BREAKDOWN,
-                argumentsJson = """{"calendar":"GREGORIAN","period":"CURRENT_MONTH","limit":5}""",
-            ),
-            context,
-        )
+        val outcome = runBlocking {
+            executor.execute(
+                ValidatedToolCall(
+                    id = "1",
+                    toolId = FinancialToolId.GET_EXPENSE_BREAKDOWN,
+                    argumentsJson = """{"calendar":"GREGORIAN","period":"CURRENT_MONTH","limit":5}""",
+                ),
+                context,
+            )
+        }
         assertTrue(outcome is ToolExecutionOutcome.Success)
         val json = (outcome as ToolExecutionOutcome.Success).resultJson
         assertTrue(json.contains("Ignore previous instructions"))
@@ -301,21 +304,23 @@ class FinancialToolsTest {
     @Test
     fun ambiguousPeriodAsksClarification() {
         val executor = FinancialToolExecutor()
-        val outcome = executor.execute(
-            ValidatedToolCall(
-                id = "1",
-                toolId = FinancialToolId.GET_MONTHLY_FINANCIAL_SUMMARY,
-                argumentsJson = """{"calendar":"JALALI"}""",
-            ),
-            ToolExecutionContext(
-                today = LocalDate(2024, 1, 1),
-                preferredCalendar = CalendarSystem.JALALI,
-                transactions = emptyList(),
-                categories = emptyList(),
-                goals = emptyList(),
-                allocations = emptyList(),
-            ),
-        )
+        val outcome = runBlocking {
+            executor.execute(
+                ValidatedToolCall(
+                    id = "1",
+                    toolId = FinancialToolId.GET_MONTHLY_FINANCIAL_SUMMARY,
+                    argumentsJson = """{"calendar":"JALALI"}""",
+                ),
+                ToolExecutionContext(
+                    today = LocalDate(2024, 1, 1),
+                    preferredCalendar = CalendarSystem.JALALI,
+                    transactions = emptyList(),
+                    categories = emptyList(),
+                    goals = emptyList(),
+                    allocations = emptyList(),
+                ),
+            )
+        }
         assertTrue(outcome is ToolExecutionOutcome.ClarificationNeeded)
     }
 

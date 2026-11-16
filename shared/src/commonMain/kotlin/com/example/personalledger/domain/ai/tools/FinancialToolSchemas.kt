@@ -13,7 +13,7 @@ import kotlinx.serialization.json.putJsonObject
  * Schemas live in code; the model may only propose arguments matching these shapes.
  */
 object FinancialToolSchemas {
-    const val PROMPT_VERSION = "financial-tools-v1"
+    const val PROMPT_VERSION = "financial-tools-v2"
 
     fun definitions(): List<AiToolDefinition> = listOf(
         AiToolDefinition(
@@ -48,6 +48,33 @@ object FinancialToolSchemas {
             name = FinancialToolId.GET_GOAL_PROGRESS.apiName,
             description = "Read-only progress for one goal by allowlisted goalId from list_active_goals.",
             parametersSchema = goalProgressSchema(),
+        ),
+        AiToolDefinition(
+            name = FinancialToolId.GET_INCOME_SAVINGS_SUMMARY.apiName,
+            description = "Read-only income/expense/net balance over the last N calendar months (1..12). " +
+                "Net is labeled as income−expense balance, NOT proven savings. Amounts are ریال.",
+            parametersSchema = incomeSavingsSchema(),
+        ),
+        AiToolDefinition(
+            name = FinancialToolId.SEARCH_CURRENT_PROPERTY_PRICES.apiName,
+            description = "Search current property asking prices for a user-stated city/area. " +
+                "Do not invent neighborhood. Does not send financial/history data. " +
+                "Returns citations with URL and retrieval time when a search provider is configured.",
+            parametersSchema = propertySearchSchema(),
+        ),
+        AiToolDefinition(
+            name = FinancialToolId.ESTIMATE_HOME_PURCHASE_TIMELINE.apiName,
+            description = "Deterministic scenario estimate for months to afford a home using " +
+                "local income/expense averages and price range from a prior search_current_property_prices " +
+                "in this turn. Does not invent market prices.",
+            parametersSchema = homePurchaseEstimateSchema(),
+        ),
+        AiToolDefinition(
+            name = FinancialToolId.REQUEST_CHAT_HISTORY.apiName,
+            description = "Ask the app to attach up to 6 recent AI chat turns on a re-plan. " +
+                "Use only when prior assistant/user messages are required to resolve the question. " +
+                "Requires user history consent in settings.",
+            parametersSchema = historyRequestSchema(),
         ),
     )
 
@@ -233,6 +260,99 @@ object FinancialToolSchemas {
     private fun emptyObjectSchema(): JsonObject = buildJsonObject {
         put("type", "object")
         putJsonObject("properties") {}
+        put("additionalProperties", false)
+    }
+
+    private fun incomeSavingsSchema(): JsonObject = buildJsonObject {
+        put("type", "object")
+        putJsonObject("properties") {
+            putJsonObject("calendar") {
+                put("type", "string")
+                putJsonArray("enum") {
+                    add(JsonPrimitive("JALALI"))
+                    add(JsonPrimitive("GREGORIAN"))
+                }
+            }
+            putJsonObject("months") {
+                put("type", "integer")
+                put("minimum", 1)
+                put("maximum", FinancialToolId.MAX_LOOKBACK_MONTHS)
+                put("description", "How many calendar months ending at current month")
+            }
+        }
+        putJsonArray("required") { add(JsonPrimitive("calendar")) }
+        put("additionalProperties", false)
+    }
+
+    private fun propertySearchSchema(): JsonObject = buildJsonObject {
+        put("type", "object")
+        putJsonObject("properties") {
+            putJsonObject("locationQuery") {
+                put("type", "string")
+                put("minLength", 2)
+                put("maxLength", FinancialToolId.MAX_SEARCH_QUERY_CHARS)
+                put("description", "City/area explicitly stated or confirmed by the user")
+            }
+            putJsonObject("propertyType") {
+                put("type", "string")
+                put("maxLength", 40)
+            }
+            putJsonObject("areaSqmMin") { put("type", "integer") }
+            putJsonObject("areaSqmMax") { put("type", "integer") }
+        }
+        putJsonArray("required") { add(JsonPrimitive("locationQuery")) }
+        put("additionalProperties", false)
+    }
+
+    private fun homePurchaseEstimateSchema(): JsonObject = buildJsonObject {
+        put("type", "object")
+        putJsonObject("properties") {
+            putJsonObject("calendar") {
+                put("type", "string")
+                putJsonArray("enum") {
+                    add(JsonPrimitive("JALALI"))
+                    add(JsonPrimitive("GREGORIAN"))
+                }
+            }
+            putJsonObject("monthsLookback") {
+                put("type", "integer")
+                put("minimum", 1)
+                put("maximum", FinancialToolId.MAX_LOOKBACK_MONTHS)
+            }
+            putJsonObject("downPaymentRial") {
+                put("type", "integer")
+                put("description", "Only if the user explicitly stated a down-payment in ریال")
+            }
+            putJsonObject("currentSavingsRial") {
+                put("type", "integer")
+                put("description", "Only if the user explicitly stated current savings in ریال")
+            }
+            putJsonObject("surplusAssumption") {
+                put("type", "string")
+                putJsonArray("enum") {
+                    add(JsonPrimitive("ALL_MONTHLY_BALANCE"))
+                    add(JsonPrimitive("HALF_MONTHLY_BALANCE"))
+                    add(JsonPrimitive("BOTH"))
+                }
+            }
+        }
+        putJsonArray("required") { add(JsonPrimitive("calendar")) }
+        put("additionalProperties", false)
+    }
+
+    private fun historyRequestSchema(): JsonObject = buildJsonObject {
+        put("type", "object")
+        putJsonObject("properties") {
+            putJsonObject("history_scope") {
+                put("type", "string")
+                putJsonArray("enum") {
+                    add(JsonPrimitive("RECENT_RELEVANT"))
+                }
+            }
+            putJsonObject("history_required") {
+                put("type", "boolean")
+            }
+        }
         put("additionalProperties", false)
     }
 }

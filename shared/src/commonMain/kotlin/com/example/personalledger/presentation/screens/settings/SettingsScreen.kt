@@ -117,6 +117,27 @@ fun SettingsScreen(
                 state.calendar == CalendarSystem.GREGORIAN,
             ) { viewModel.setCalendar(CalendarSystem.GREGORIAN) }
         }
+
+        Spacer(Modifier.height(16.dp))
+        SettingsSectionTitle(Strings.aiPrivacySection)
+        LedgerCard {
+            Text(Strings.aiHistoryConsentTitle, style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(6.dp))
+            ThemeOption(
+                Strings.aiHistoryConsentOn,
+                state.aiHistoryConsent,
+            ) { viewModel.setAiHistoryConsent(true) }
+            ThemeOption(
+                Strings.aiHistoryConsentOff,
+                !state.aiHistoryConsent,
+            ) { viewModel.setAiHistoryConsent(false) }
+            Text(
+                text = Strings.aiHistoryConsentHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
         Spacer(Modifier.height(24.dp))
     }
 }

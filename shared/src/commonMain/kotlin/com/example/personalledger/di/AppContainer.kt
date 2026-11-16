@@ -1,8 +1,12 @@
 package com.example.personalledger.di
 
+import com.example.personalledger.data.ai.AiAssistantPreferences
 import com.example.personalledger.data.ai.AiChatHistoryStore
 import com.example.personalledger.data.ai.AiSettingsStore
+import com.example.personalledger.data.ai.AiUsageQuotaStore
 import com.example.personalledger.data.ai.createAiHttpClient
+import com.example.personalledger.domain.ai.search.UnavailablePropertyPriceSearchProvider
+import com.example.personalledger.domain.ai.tools.FinancialToolExecutor
 import com.example.personalledger.data.ai.provider.AiProviderRegistry
 import com.example.personalledger.data.local.LedgerStore
 import com.example.personalledger.data.local.PlatformFileStore
@@ -25,7 +29,6 @@ import com.example.personalledger.domain.sms.HeuristicBankSmsParser
 import com.example.personalledger.domain.sms.SmsTransactionParser
 import com.example.personalledger.domain.usecase.ArchiveGoalUseCase
 import com.example.personalledger.domain.ai.orchestration.AiToolOrchestrator
-import com.example.personalledger.domain.ai.tools.FinancialToolExecutor
 import com.example.personalledger.domain.usecase.AskAiAssistantUseCase
 import com.example.personalledger.domain.usecase.BuildFinancialInsightUseCase
 import com.example.personalledger.domain.usecase.CompleteGoalUseCase
@@ -64,6 +67,7 @@ class AppContainer(
 
     val themePreferences = ThemePreferences(settings)
     val displayPreferences = DisplayPreferences(settings)
+    val aiAssistantPreferences = AiAssistantPreferences(settings)
 
     val transactionRepository: TransactionRepository = TransactionRepositoryImpl(ledgerStore)
     val categoryRepository: CategoryRepository = CategoryRepositoryImpl(ledgerStore)
@@ -74,6 +78,8 @@ class AppContainer(
 
     private val aiSettingsStore = AiSettingsStore(settings, secureCredentialStore)
     private val aiChatHistoryStore = AiChatHistoryStore(fileStore)
+    private val aiUsageQuotaStore = AiUsageQuotaStore(fileStore)
+    private val propertyPriceSearch = UnavailablePropertyPriceSearchProvider()
     private val aiProviderRegistry = AiProviderRegistry(aiHttpClient)
     val aiAssistantRepository: AiAssistantRepository = AiAssistantRepositoryImpl(
         settingsStore = aiSettingsStore,
@@ -143,7 +149,9 @@ class AppContainer(
     )
     private val aiToolOrchestrator = AiToolOrchestrator(
         aiRepository = aiAssistantRepository,
-        executor = FinancialToolExecutor(),
+        executor = FinancialToolExecutor(propertySearch = propertyPriceSearch),
+        propertySearch = propertyPriceSearch,
+        historyConsent = { aiAssistantPreferences.readHistoryConsent() },
     )
     val askAiAssistant = AskAiAssistantUseCase(
         aiRepository = aiAssistantRepository,
@@ -152,6 +160,7 @@ class AppContainer(
         categories = categoryRepository,
         goals = goalRepository,
         allocations = goalAllocationRepository,
+        quotaStore = aiUsageQuotaStore,
     )
     val resetAiAssistant = ResetAiAssistantUseCase(aiAssistantRepository)
 

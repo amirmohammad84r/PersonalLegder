@@ -2,6 +2,7 @@ package com.example.personalledger.presentation.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.personalledger.data.ai.AiAssistantPreferences
 import com.example.personalledger.data.prefs.AppLanguage
 import com.example.personalledger.data.prefs.DisplayPreferences
 import com.example.personalledger.data.prefs.ThemeMode
@@ -16,6 +17,7 @@ data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val language: AppLanguage = AppLanguage.FA,
     val calendar: CalendarSystem = CalendarSystem.JALALI,
+    val aiHistoryConsent: Boolean = false,
     /** Languages the app currently ships strings for. */
     val supportedLanguages: List<AppLanguage> = listOf(AppLanguage.FA),
     val loading: Boolean = true,
@@ -24,16 +26,19 @@ data class SettingsUiState(
 class SettingsViewModel(
     private val themePreferences: ThemePreferences,
     private val displayPreferences: DisplayPreferences,
+    private val aiAssistantPreferences: AiAssistantPreferences,
 ) : ViewModel() {
     val uiState: StateFlow<SettingsUiState> = combine(
         themePreferences.observe(),
         displayPreferences.observeLanguage(),
         displayPreferences.observeCalendar(),
-    ) { theme, language, calendar ->
+        aiAssistantPreferences.observeHistoryConsent(),
+    ) { theme, language, calendar, historyConsent ->
         SettingsUiState(
             themeMode = theme,
             language = language,
             calendar = calendar,
+            aiHistoryConsent = historyConsent,
             supportedLanguages = listOf(AppLanguage.FA),
             loading = false,
         )
@@ -44,6 +49,7 @@ class SettingsViewModel(
             themeMode = themePreferences.read(),
             language = displayPreferences.readLanguage(),
             calendar = displayPreferences.readCalendar(),
+            aiHistoryConsent = aiAssistantPreferences.readHistoryConsent(),
             loading = false,
         ),
     )
@@ -59,5 +65,9 @@ class SettingsViewModel(
 
     fun setCalendar(system: CalendarSystem) {
         displayPreferences.writeCalendar(system)
+    }
+
+    fun setAiHistoryConsent(enabled: Boolean) {
+        aiAssistantPreferences.writeHistoryConsent(enabled)
     }
 }

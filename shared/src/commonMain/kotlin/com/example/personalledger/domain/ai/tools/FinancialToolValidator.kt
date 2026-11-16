@@ -25,15 +25,19 @@ object FinancialToolValidator {
         if (proposed.isEmpty()) {
             throw FinancialToolValidationException("No tool calls proposed.")
         }
-        if (proposed.size > maxCalls) {
-            throw FinancialToolBudgetExceededException(
-                "Too many tool calls (${proposed.size}); max is $maxCalls.",
-            )
-        }
         val seenFingerprints = mutableSetOf<String>()
+        var budgeted = 0
         return proposed.map { call ->
             val toolId = FinancialToolId.fromApiName(call.name)
                 ?: throw FinancialToolUnknownException("Unknown tool: ${call.name}")
+            if (toolId.countsAgainstToolBudget()) {
+                budgeted++
+                if (budgeted > maxCalls) {
+                    throw FinancialToolBudgetExceededException(
+                        "Too many tool calls ($budgeted); max is $maxCalls shared across financial and web tools.",
+                    )
+                }
+            }
             val fingerprint = "${toolId.apiName}|${call.argumentsJson.trim()}"
             if (!seenFingerprints.add(fingerprint)) {
                 throw FinancialToolBudgetExceededException(
