@@ -43,6 +43,10 @@ data class AccountBalance(
 data class DashboardSummary(
     /** Balance for selected account, or sum of all accounts when [selectedAccountId] is null. */
     val totalBalanceRial: Long,
+    /** Sum of balances for cash-like accounts in the current account filter. */
+    val cashBalanceRial: Long,
+    /** Sum of balances for non-cash (bank-like) accounts in the current account filter. */
+    val bankBalanceRial: Long,
     /** Income in the current Jalali month (account-filtered). */
     val monthIncomeRial: Long,
     /** Expense in the current Jalali month (account-filtered). */

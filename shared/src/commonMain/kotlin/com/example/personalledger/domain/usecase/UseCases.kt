@@ -62,18 +62,18 @@ class ObserveDashboardUseCase(
                         .thenByDescending { it.createdAt },
                 )
                 .take(recentLimit)
-            val balance = if (accountId == null) {
-                BalanceCalculator.totalBalance(accs, txs, allocs)
-            } else {
-                val account = scopedAccounts.firstOrNull()
-                if (account == null) {
-                    0L
-                } else {
-                    BalanceCalculator.accountBalance(account, txs, allocs)
-                }
-            }
+            val balances = BalanceCalculator.accountBalances(scopedAccounts, scopedTxs, allocs)
+            val cashBalance = balances
+                .filter { isCashAccountName(it.account.name) }
+                .sumOf { it.balanceRial }
+            val bankBalance = balances
+                .filter { !isCashAccountName(it.account.name) }
+                .sumOf { it.balanceRial }
+            val balance = balances.sumOf { it.balanceRial }
             DashboardSummary(
                 totalBalanceRial = balance,
+                cashBalanceRial = cashBalance,
+                bankBalanceRial = bankBalance,
                 monthIncomeRial = BalanceCalculator.totalIncome(monthTxs),
                 monthExpenseRial = BalanceCalculator.totalExpense(monthTxs),
                 recentTransactions = recent,
@@ -82,6 +82,11 @@ class ObserveDashboardUseCase(
                 monthLabel = AppCalendar.formatMonthYear(today, calendar),
             )
         }
+
+    private fun isCashAccountName(name: String): Boolean {
+        val n = name.trim()
+        return n.contains("نقد") || n.contains("cash", ignoreCase = true)
+    }
 }
 
 class ObserveTransactionsUseCase(
